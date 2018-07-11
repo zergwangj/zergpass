@@ -15,19 +15,52 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
+	"fmt"
+	"github.com/zergwangj/zergpass/db"
 )
 
 // addCmd represents the add command
 var addCmd = &cobra.Command{
 	Use:   "add",
-	Short: "Add a new entry to a password database",
-	Long: `Add a new entry to a database. You will be promped to supply values for
-the entry's fields - press return to leave an unwanted field blank.`,
+	Short: "Add a new entry to password database",
+	Long: `Add a new entry to password database. You will supply values for
+the entry's fields.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("add called")
+		//fmt.Println("add called")
+		title, err := cmd.Flags().GetString("title")
+		if err != nil || len(title) == 0 {
+			fmt.Println("Error: don't found entry's title")
+			return
+		}
+		username, err := cmd.Flags().GetString("username")
+		if err != nil || len(username) == 0 {
+			fmt.Println("Error: don't found entry's username")
+			return
+		}
+		password, err := cmd.Flags().GetString("password")
+		if err != nil || len(password) == 0 {
+			fmt.Println("Error: don't found entry's password")
+			return
+		}
+		url, _ := cmd.Flags().GetString("url")
+		notes, _ := cmd.Flags().GetString("notes")
+
+		entry := db.NewEntry()
+		entry.Title = title
+		entry.Username = username
+		entry.Password = password
+		entry.Url = url
+		entry.Notes = notes
+
+		d := db.NewDB()
+		defer d.Close()
+		err = d.Add(entry)
+		if err != nil {
+			fmt.Println("Error: add entry failed - ", err.Error())
+			return
+		}
+		fmt.Println("Add entry success")
 	},
 }
 
@@ -43,4 +76,9 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// addCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	addCmd.Flags().StringP("title", "t", "", "password entry's title")
+	addCmd.Flags().StringP("url", "l", "", "password entry's URL")
+	addCmd.Flags().StringP("username", "u", "", "password entry's username")
+	addCmd.Flags().StringP("password", "p", "", "password entry's password")
+	addCmd.Flags().StringP("notes", "n", "", "password entry's notes")
 }

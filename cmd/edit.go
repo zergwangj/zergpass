@@ -15,23 +15,51 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
+	"fmt"
+	"github.com/zergwangj/zergpass/db"
 )
+
+const hiddenString = "!@#$%^&*"
 
 // editCmd represents the edit command
 var editCmd = &cobra.Command{
 	Use:   "edit",
 	Short: "Edit an existing database entry",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Long: `Edit an existing database entry.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("edit called")
+		//fmt.Println("edit called")
+		title, err := cmd.Flags().GetString("title")
+		if err != nil || len(title) == 0 {
+			fmt.Println("Error: don't found entry's title")
+			return
+		}
+		username, _ := cmd.Flags().GetString("username")
+		password, _ := cmd.Flags().GetString("password")
+		url, _ := cmd.Flags().GetString("url")
+		notes, _ := cmd.Flags().GetString("notes")
+
+		d := db.NewDB()
+		defer d.Close()
+		entry, err := d.Get(title)
+		if username != hiddenString && len(username) > 0 {
+			entry.Username = username
+		}
+		if password != hiddenString && len(password) > 0 {
+			entry.Password = password
+		}
+		if url != hiddenString && len(url) > 0 {
+			entry.Url = url
+		}
+		if notes != hiddenString && len(notes) > 0 {
+			entry.Notes = notes
+		}
+		err = d.Set(entry)
+		if err != nil {
+			fmt.Println("Error: edit entry failed - ", err.Error())
+			return
+		}
+		fmt.Println("Edit entry success")
 	},
 }
 
@@ -47,4 +75,9 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// editCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	editCmd.Flags().StringP("title", "t", "", "password entry's title")
+	editCmd.Flags().StringP("url", "l", hiddenString, "password entry's URL")
+	editCmd.Flags().StringP("username", "u", hiddenString, "password entry's username")
+	editCmd.Flags().StringP("password", "p", hiddenString, "password entry's password")
+	editCmd.Flags().StringP("notes", "n", hiddenString, "password entry's notes")
 }

@@ -23,11 +23,10 @@ const dbFile = "zergpass.db"
 const passwordsBucket = "passwords"
 
 type DB struct {
-	Password	string
 	Db			*bolt.DB
 }
 
-func NewDB(password string) *DB {
+func NewDB() *DB {
 	db, err := bolt.Open(dbFile, 0600, nil)
 	if err != nil {
 		return nil
@@ -49,7 +48,6 @@ func NewDB(password string) *DB {
 	}
 
 	d := &DB {
-		Password: 	password,
 		Db:  		db,
 	}
 	return d
@@ -98,7 +96,7 @@ func (d *DB) Delete(title string) error {
 		if b != nil {
 			data := b.Get([]byte(title))
 			if data == nil {
-				return fmt.Errorf("Entry: %s not found", title)
+				return fmt.Errorf("Entry %s not found", title)
 			}
 			return nil
 		}
@@ -125,13 +123,13 @@ func (d *DB) Delete(title string) error {
 	return nil
 }
 
-func (d *DB) Edit(entry *Entry) error {
+func (d *DB) Set(entry *Entry) error {
 	err := d.Db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(passwordsBucket))
 		if b != nil {
 			data := b.Get([]byte(entry.Title))
 			if data == nil {
-				return fmt.Errorf("Entry: %s not found", entry.Title)
+				return fmt.Errorf("Entry %s not found", entry.Title)
 			}
 			return nil
 		}
@@ -160,4 +158,55 @@ func (d *DB) Edit(entry *Entry) error {
 	}
 
 	return nil
+}
+
+func (d *DB) Get(title string) (*Entry, error) {
+	var entry *Entry
+	var err error
+
+	err = d.Db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(passwordsBucket))
+		if b != nil {
+			data := b.Get([]byte(title))
+			if data == nil {
+				return fmt.Errorf("Entry %s not found", title)
+			}
+			entry, err = DeserializeEntry(data)
+			if err != nil {
+				return err
+			}
+			return nil
+		}
+		return fmt.Errorf("Bucket passwords is not found")
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return entry, nil
+}
+
+func (d *DB) List() ([]*Entry, error) {
+	entries := make([]*Entry, 0, 100)
+
+	err := d.Db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(passwordsBucket))
+		if b != nil {
+			b.ForEach(func(k, v []byte) error {
+				entry, err := DeserializeEntry(v)
+				if err != nil {
+					return err
+				}
+				entries = append(entries, entry)
+				return nil
+			})
+			return nil
+		}
+		return fmt.Errorf("Bucket passwords is not found")
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return entries, nil
 }

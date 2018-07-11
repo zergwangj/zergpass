@@ -17,6 +17,7 @@ package db
 import (
 	"bytes"
 	"encoding/gob"
+	"reflect"
 )
 
 type Entry struct {
@@ -31,12 +32,23 @@ func NewEntry() *Entry {
 	return &Entry{}
 }
 
-func (entry *Entry) GetPassword() string {
-	return ""
+func FieldStrings() []string {
+	strings := make([]string, 0)
+	entryType := reflect.TypeOf(Entry{})
+	for i := 0; i < entryType.NumField(); i++ {
+		strings = append(strings, entryType.Field(i).Name)
+	}
+	return strings
 }
 
-func (entry *Entry) SetPassword(password string) {
-
+func (e *Entry) ValueStrings() []string {
+	strings := make([]string, 0)
+	strings = append(strings, e.Title)
+	strings = append(strings, e.Url)
+	strings = append(strings, e.Username)
+	strings = append(strings, e.Password)
+	strings = append(strings, e.Notes)
+	return strings
 }
 
 func (e *Entry) Serialize() ([]byte, error) {
